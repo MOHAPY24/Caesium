@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 extern bool file_exists(const char *filename);
 extern void SetupArgonDirs();

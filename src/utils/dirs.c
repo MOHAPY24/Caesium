@@ -18,8 +18,6 @@ void SetupArgonDirs() {
     system("mkdir /tmp/argon/builds");
 }
 
-#include <dirent.h>
-#include <stdbool.h>
 
 bool is_dir_empty(const char *path) {
     DIR *dir = opendir(path);
