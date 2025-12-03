@@ -18,6 +18,44 @@ void SetupArgonDirs() {
     system("mkdir /tmp/argon/builds");
 }
 
+#include <dirent.h>
+#include <stdbool.h>
+
+bool is_dir_empty(const char *path) {
+    DIR *dir = opendir(path);
+    if (!dir) {
+        return true;
+    }
+
+    struct dirent *entry;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.' &&
+           (entry->d_name[1] == '\0' ||
+            (entry->d_name[1] == '.' && entry->d_name[2] == '\0'))) {
+            continue; // skip "." and ".."
+        }
+
+        closedir(dir);
+        return false;
+    }
+
+    closedir(dir);
+    return true; 
+}
+
+
+bool directory_exists(const char *path) {
+    struct stat st;
+
+    if (stat(path, &st) != 0) {
+        return false;
+    }
+
+    return S_ISDIR(st.st_mode);
+}
+
+
 char* get_repo_name(const char *pkg) {
     const char *slash = strrchr(pkg, '/');
     const char *name = slash ? slash + 1 : pkg;
