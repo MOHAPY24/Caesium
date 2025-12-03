@@ -1,5 +1,4 @@
-#include "headers/cli.h"
-#include "stdlib.h"
+#include "headers/install.h"
 
 const char* getDomain(InstallArgs args){
     if(args.Codeberg) {
@@ -17,3 +16,4 @@ const char* getDomain(InstallArgs args){
 int runCommand(const char* cmd){
     return system(cmd);
 }
+
