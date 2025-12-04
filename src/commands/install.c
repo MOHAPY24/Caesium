@@ -124,3 +124,159 @@ int cloneRepo(const InstallArgs *pkg, const char* branch, const char* BuildDir){
 
 }
 
+int applyPatches(const char* BuildDir, const char* patchesDir){
+    if(patchesDir == NULL){
+        return NULL;
+    }
+    if(!directory_exists(patchesDir)){
+        perror("patches directory does not exist.");
+        return 0;
+    }
+    int cmd;
+    cmd = snprintf(cmd, sizeof(cmd), "cd %s && for patch in %s/*.patch; do git apply \"$patch\"; done", BuildDir, patchesDir);
+    return runCommand(cmd); 
+}
+
+
+
+int buildWithMake(const char *buildDir, const char *cflags, const char *libs) {
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("fork");
+        return -1;
+    }
+
+    if (pid == 0) {
+        if (chdir(buildDir) != 0) {
+            perror("chdir");
+            exit(1);
+        }
+
+        int envCount = 0;
+        while (environ[envCount]) envCount++;
+
+        char **newEnv = malloc((envCount + 3) * sizeof(char *));
+        if (!newEnv) {
+            perror("malloc");
+            exit(1);
+        }
+
+        for (int i = 0; i < envCount; i++) {
+            newEnv[i] = environ[i];
+        }
+
+        int idx = envCount;
+
+        if (cflags && cflags[0] != '\0') {
+            size_t len = strlen(cflags) + 8;
+            newEnv[idx] = malloc(len);
+            snprintf(newEnv[idx++], len, "CFLAGS=%s", cflags);
+        }
+
+        if (libs && libs[0] != '\0') {
+            size_t len = strlen(libs) + 9;
+            newEnv[idx] = malloc(len);
+            snprintf(newEnv[idx++], len, "LDFLAGS=%s", libs);
+        }
+
+        newEnv[idx] = NULL;
+
+        char *argv[] = { "make", NULL };
+        execvpe("make", argv, newEnv);
+        perror("execvpe");
+        exit(1);
+    }
+
+    int status = 0;
+    waitpid(pid, &status, 0);
+
+    return status;
+}
+
+int buildWithCargo(const char* buildDir) {
+    char command[512];
+
+    snprintf(command, sizeof(command),
+             "cd \"%s\" && cargo build --release",
+             buildDir);
+
+    return runCommand(command);
+}
+
+int buildWithCMake(const char* buildDir) {
+    char buildPath[512];
+    char cmd[1024];
+
+    snprintf(buildPath, sizeof(buildPath), "%s/build", buildDir);
+
+    snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", buildPath);
+    if(runCommand(cmd) != 0) {
+        return -1;
+    }
+
+    snprintf(cmd, sizeof(cmd),
+             "cd \"%s\" && cmake ..",
+             buildPath);
+    if(runCommand(cmd) != 0) {
+        return -2;
+    }
+
+    snprintf(cmd, sizeof(cmd),
+             "cd \"%s\" && make",
+             buildPath);
+    if(runCommand(cmd) != 0) {
+        return -3;
+    }
+
+    return 0;
+}
+
+int buildWithConfigure(const char* buildDir) {
+    char cmd[1024];
+
+    snprintf(cmd, sizeof(cmd),
+             "cd \"%s\" && ./configure",
+             buildDir);
+
+    if(runCommand(cmd) != 0) {
+        return -1;
+    }
+
+    snprintf(cmd, sizeof(cmd),
+             "cd \"%s\" && make",
+             buildDir);
+
+    if(runCommand(cmd) != 0) {
+        return -2;
+    }
+
+    return 0;
+}
+
+int buildWithZig(const char* buildDir) {
+    char cmd[1024];
+
+    snprintf(cmd, sizeof(cmd),
+             "cd \"%s\" && zig build",
+             buildDir);
+
+    return runCommand(cmd);
+}
+
+int buildWithShellScript(const char* buildDir) {
+    char scriptPath[1024];
+    char cmd[2048];
+
+    snprintf(scriptPath, sizeof(scriptPath), "%s/build.sh", buildDir);
+
+    if (chmod(scriptPath, 0755) != 0) {
+        perror("chmod");
+        return -1;
+    }
+
+    snprintf(cmd, sizeof(cmd), "cd \"%s\" && ./build.sh", buildDir);
+
+    return runCommand(cmd);
+}
+
