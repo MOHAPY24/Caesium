@@ -1,6 +1,5 @@
 #include "headers/install.h"
-#include "src/utils/headers/dirs.h"
-#include "src/utils/headers/checks.h"
+
 
 
 const char* getDomain(InstallArgs args){
@@ -89,13 +88,13 @@ bool handleExistingDir(const char* BuildDir){
 	printf("  2. Remove directory and re-clone");
     printf("  3. Abort installation");
 	printf("Choice [1-3]: ");
-    const char* choice;
-    scanf(choice);
-    if (choice == '1'){
+    char choice[18];
+    scanf("%7s", choice);
+    if (strcmp(choice, "1") == 0){
         printf("Using existing directory...");
         return true;
     }
-    else if(choice == '2'){
+    else if(strcmp(choice, "2") == 0){
         printf("Removing directory and re-cloning...");
         char cmdr[1024];
         snprintf(cmdr, sizeof(cmdr), "rm -rf '%s'", BuildDir);
@@ -112,12 +111,12 @@ bool handleExistingDir(const char* BuildDir){
 int cloneRepo(const InstallArgs *pkg, const char* branch, const char* BuildDir){
     const char* domain = getDomain(*pkg);
     const char* repo_path = extract_repo_path(pkg->Packages[0]);
-    int cmd;
+    char cmd[2046];
     if(branch != NULL && branch[0] != '\0'){
-        cmd = snprintf(cmd, sizeof(cmd), "git clone --branch %s https://%s/%s %s", branch, domain, repo_path, BuildDir);
+        snprintf(cmd, sizeof(cmd), "git clone --branch %s https://%s/%s %s", branch, domain, repo_path, BuildDir);
     }
     else{
-        cmd = snprintf(cmd, sizeof(cmd), "git clone https://%s/%s %s", domain, repo_path, BuildDir);
+        snprintf(cmd, sizeof(cmd), "git clone https://%s/%s %s", domain, repo_path, BuildDir);
     }
     free((void*)repo_path);
     return runCommand(cmd);
@@ -126,14 +125,14 @@ int cloneRepo(const InstallArgs *pkg, const char* branch, const char* BuildDir){
 
 int applyPatches(const char* BuildDir, const char* patchesDir){
     if(patchesDir == NULL){
-        return NULL;
+        return -1;
     }
     if(!directory_exists(patchesDir)){
         perror("patches directory does not exist.");
-        return 0;
+        return -1;
     }
-    int cmd;
-    cmd = snprintf(cmd, sizeof(cmd), "cd %s && for patch in %s/*.patch; do git apply \"$patch\"; done", BuildDir, patchesDir);
+    char cmd[2046];
+    snprintf(cmd, sizeof(cmd), "cd %s && for patch in %s/*.patch; do git apply \"$patch\"; done", BuildDir, patchesDir);
     return runCommand(cmd); 
 }
 
@@ -183,9 +182,9 @@ int buildWithMake(const char *buildDir, const char *cflags, const char *libs) {
         newEnv[idx] = NULL;
 
         char *argv[] = { "make", NULL };
-        execvpe("make", argv, newEnv);
-        perror("execvpe");
-        exit(1);
+        runCommand("make");
+        //perror("execvpe");
+        //exit(1);
     }
 
     int status = 0;
